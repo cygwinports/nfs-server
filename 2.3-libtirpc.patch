@@ -1,0 +1,165 @@
+--- a/libnfs/auth_clnt.c	2006-10-13 15:11:53.000000000 -0500
++++ b/libnfs/auth_clnt.c	2016-04-25 23:22:52.931223800 -0500
+@@ -53,7 +53,7 @@
+ auth_clnt(struct svc_req *rqstp)
+ {
+ 	nfs_client *cp = NULL;
+-	struct in_addr addr = svc_getcaller(rqstp->rq_xprt)->sin_addr;
++	struct in_addr addr = ((struct sockaddr_in*)svc_getcaller(rqstp->rq_xprt))->sin_addr;
+ 
+ 	/* Get the client and list of exports */
+ 	if ((cp = auth_clientbyaddr(addr)) != NULL)
+@@ -86,7 +86,7 @@
+ 
+ 	/* Check request originated on a privileged port. */
+ 	if (!allow_non_root && mp->o.secure_port
+-	    && !SECURE_PORT(svc_getcaller(rqstp->rq_xprt)->sin_port)) {
++	    && !SECURE_PORT(((struct sockaddr_in*)svc_getcaller(rqstp->rq_xprt))->sin_port)) {
+ 		dbg_printf(__FILE__, __LINE__, L_ERROR,
+ 			   "NFS request from %s originated on insecure port, %s\n",
+ 			   cp->clnt_name, "psychoanalysis suggested");
+--- a/libnfs/xrealloc.c	2006-10-13 15:12:13.000000000 -0500
++++ b/libnfs/xrealloc.c	2016-04-25 23:24:03.014123200 -0500
+@@ -28,7 +28,7 @@
+  * If N is 0, run free and return NULL.
+  */
+ void *
+-xrealloc(void *p, unsigned int n)
++xrealloc(void *p, size_t n)
+ {
+ 	if (p == 0) {
+ 		return xmalloc(n);
+--- a/mountd/mountd.c	2006-10-13 15:12:21.000000000 -0500
++++ b/mountd/mountd.c	2016-04-25 23:48:27.979650200 -0500
+@@ -42,7 +42,7 @@
+ 	dbg_printf(__FILE__, __LINE__, L_NOTICE,
+ 		   "NFS %s request %s (%s, from %s)\n",
+ 		   type, action, path,
+-		   inet_ntoa(svc_getcaller(rqstp->rq_xprt)->sin_addr));
++		   inet_ntoa(((struct sockaddr_in*)svc_getcaller(rqstp->rq_xprt))->sin_addr));
+ }
+ #else
+ #define log_mount(type, action, path, rqstp)
+@@ -296,7 +296,7 @@ reinitialize(int sig)
+  * Do nothing
+  */
+ void *
+-mountproc_null_1(void *argp, struct svc_req *rqstp)
++mountproc_null_1(void *argp, CLIENT *rqstp)
+ {
+ 	return ((void *) &result);
+ }
+@@ -306,7 +306,7 @@ mountproc_null_1(void *argp, struct svc_
+  * This is what the whole protocol is all about
+  */
+ fhstatus *
+-mountproc_mnt_1(dirpath * argp, struct svc_req *rqstp)
++mountproc_mnt_1(dirpath * argp, CLIENT *rqstp)
+ {
+ 	fhstatus *res;
+ 	struct stat stbuf;
+@@ -379,7 +379,7 @@ mountproc_mnt_1(dirpath * argp, struct s
+  * Dump the contents of rmtab on the caller.
+  */
+ mountlist *
+-mountproc_dump_1(void *argp, struct svc_req * rqstp)
++mountproc_dump_1(void *argp, CLIENT * rqstp)
+ {
+ 	return (rmtab_lst_client());
+ }
+@@ -389,7 +389,7 @@ mountproc_dump_1(void *argp, struct svc_
+  * Remove a mounted fs's rmtab entry.
+  */
+ void *
+-mountproc_umnt_1(dirpath * argp, struct svc_req *rqstp)
++mountproc_umnt_1(dirpath * argp, CLIENT *rqstp)
+ {
+ 	rmtab_del_client(*argp, rqstp);
+ 	return ((void *) &result);
+@@ -400,7 +400,7 @@ mountproc_umnt_1(dirpath * argp, struct
+  * Remove a client's rmtab entry.
+  */
+ void *
+-mountproc_umntall_1(void *argp, struct svc_req *rqstp)
++mountproc_umntall_1(void *argp, CLIENT *rqstp)
+ {
+ 	rmtab_mdel_client(rqstp);
+ 	return ((void *) &result);
+@@ -411,7 +411,7 @@ mountproc_umntall_1(void *argp, struct s
+  * Return list of all exported file systems.
+  */
+ exports *
+-mountproc_export_1(void *argp, struct svc_req *rqstp)
++mountproc_export_1(void *argp, CLIENT *rqstp)
+ {
+ 	return (&export_list);
+ }
+@@ -421,7 +421,7 @@ mountproc_export_1(void *argp, struct sv
+  * Same as EXPORT
+  */
+ exports *
+-mountproc_exportall_1(void *argp, struct svc_req * rqstp)
++mountproc_exportall_1(void *argp, CLIENT * rqstp)
+ {
+ 	return (&export_list);
+ }
+@@ -438,7 +438,7 @@ mountproc_exportall_1(void *argp, struct
+  * Sun people choose these.
+  */
+ pathcnf *
+-mountproc_pathconf_2(dirpath * argp, struct svc_req * rqstp)
++mountproc_pathconf_2(dirpath * argp, CLIENT * rqstp)
+ {
+ 	pathcnf *res = (pathcnf *) & result;
+ 	struct stat stbuf;
+--- a/mountd/rmtab.c	2006-10-13 15:12:24.000000000 -0500
++++ b/mountd/rmtab.c	2016-04-25 23:31:54.386479900 -0500
+@@ -191,7 +191,7 @@
+ 	struct hostent *hp;
+ 	struct in_addr addr;
+ 
+-	addr = svc_getcaller(rqstp->rq_xprt)->sin_addr;
++	addr = ((struct sockaddr_in*)svc_getcaller(rqstp->rq_xprt))->sin_addr;
+ 	hp = gethostbyaddr((char *) &addr, sizeof(addr), AF_INET);
+ 
+ 	if (hp) {
+--- a/nfsd/nfsd.c	2006-10-13 15:12:34.000000000 -0500
++++ b/nfsd/nfsd.c	2016-04-25 23:50:02.842196200 -0500
+@@ -135,7 +135,7 @@
+ 	if (nfsclient == NULL) {
+ 		struct in_addr caddr;
+ 
+-		caddr = svc_getcaller(rqstp->rq_xprt)->sin_addr;
++		caddr = ((struct sockaddr_in*)svc_getcaller(rqstp->rq_xprt))->sin_addr;
+ 		if (fhc->last_clnt != NULL &&
+ 		    fhc->last_clnt->clnt_addr.s_addr == caddr.s_addr) {
+ 			nfsclient = fhc->last_clnt;
+@@ -159,7 +159,7 @@
+ 
+ 	if (nfsmount->o.noaccess &&
+ 	    ((flags & CHK_NOACCESS) || strcmp(nfsmount->path, fhc->path))) {
+-		struct in_addr addr = svc_getcaller(rqstp->rq_xprt)->sin_addr;
++		struct in_addr addr = ((struct sockaddr_in*)svc_getcaller(rqstp->rq_xprt))->sin_addr;
+ 
+ 		dbg_printf(__FILE__, __LINE__, L_WARNING,
+ 			   "client %s tried to access %s (noaccess)\n",
+@@ -236,7 +236,7 @@
+ static void
+ nfsd_xferlog(struct svc_req *rqstp, char *inout, char *pathname)
+ {
+-	struct in_addr addr = svc_getcaller(rqstp->rq_xprt)->sin_addr;
++	struct in_addr addr = ((struct sockaddr_in*)svc_getcaller(rqstp->rq_xprt))->sin_addr;
+ 
+ 	syslog(LOG_INFO, "%s %s %s", inet_ntoa(addr), inout, pathname);
+ }
+--- a/ugidd/ugidd.c	2006-10-13 15:12:41.000000000 -0500
++++ b/ugidd/ugidd.c	2016-04-25 23:30:02.936327500 -0500
+@@ -227,7 +227,7 @@
+ 	}
+ 
+ 	memset(&res, 0, sizeof(res));
+-	destaddr = *svc_getcaller(rqstp->rq_xprt);
++	destaddr = *((struct sockaddr_in*)svc_getcaller(rqstp->rq_xprt));
+ 	destaddr.sin_port = htons((in_port_t) *argp);
+ 
+ 	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {

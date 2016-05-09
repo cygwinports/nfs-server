@@ -1,0 +1,81 @@
+--- origsrc/nfs-server-2.3-5/CYGWIN-PATCHES/nfs-server-config	2016-04-28 01:35:35.710681700 -0500
++++ src/nfs-server-2.3-5/CYGWIN-PATCHES/nfs-server-config	2016-05-08 19:21:39.003483500 -0500
+@@ -156,24 +156,7 @@
+ 
+ # Ask user if they want to run nfsd under a user account
+ 
+-cat <<-EOF
+-
+-	You can choose to install the services so that they run under the local system
+-	account, or under a separate user account.  Which option you should choose
+-	depends on which version of Windows you are running:
+-
+-	  Windows 2000 : You may run nfsd under either a local system account or
+-	                 a separate user account.  You _probably_ want to run under
+-	                 the local system account.
+-	  Windows XP   : You _must_ run nfsd under a separate user account.
+-
+-	If you choose to run nfsd under a separate user account, you will be prompted
+-	for a user name and password.  If the user name you supply does not exist,
+-	it will be created.
+-
+-EOF
+-
+-if request 'Do you want to run nfsd under a separate user account?' ; then
++if true ; then
+ 
+ 	echo ''
+ 	echo -n "User name : "
+@@ -186,7 +169,11 @@
+ 		echo "User ${NFSD_USER} already exists"
+ 	else
+ 		echo "Creating user ${NFSD_USER} ..."
+-		net user ${NFSD_USER} ${NFSD_PASS} /add /yes
++		net user ${NFSD_USER} ${NFSD_PASS} \
++                  /fullname:"NFS server" \
++                  /homedir:"$(cygpath -w /var/empty)" \
++                  /comment:'<cygwin home="/var/empty" shell="/bin/false"/>' \
++                  /add /yes
+ 
+ 		echo "Adding ${NFSD_USER} to Administrators group ..."
+ 		net localgroup Administrators ${NFSD_USER} /add
+@@ -197,6 +184,8 @@
+ 	editrights -u ${NFSD_USER} -a SeAssignPrimaryTokenPrivilege
+ 	editrights -u ${NFSD_USER} -a SeCreateTokenPrivilege
+ 	editrights -u ${NFSD_USER} -a SeIncreaseQuotaPrivilege
++	editrights -u ${NFSD_USER} -a SeDenyInteractiveLogonRight
++	editrights -u ${NFSD_USER} -a SeDenyRemoteInteractiveLogonRight
+ 	editrights -u ${NFSD_USER} -a SeServiceLogonRight
+ 
+ 	echo "Adding user ${NFSD_USER} to /etc/passwd ..."
+@@ -314,30 +303,3 @@
+ fi
+ 
+ 
+-# Check for system mounts
+-
+-if /bin/mount -m | /bin/grep -q ' -s .*"/"'; then
+-	:
+-else
+-	cat <<-EOF
+-
+-	mount(1) command did not return SYSTEM mount(s).
+-
+-	It looks like you have installed Cygwin for a single user.  Cygwin mount
+-	points will not be available to programs installed as Windows services. This
+-	will keep rpcbind, mountd, and nfsd from running as Windows services.
+-
+-	In order for rpcbind, mountd and nfsd to function properly, you should
+-	establish global mount points using the /bin/mount utility. You can change
+-	user-specific Cygwin mount points to global mount points using the following
+-	command:
+-
+-	  eval \`mount -m | sed -e 's/ -u / -s /g' -e 's/$/;/'\`
+-
+-	You current mount -m  listing is:
+-
+-	EOF
+-
+-    /bin/mount -m
+-
+-fi

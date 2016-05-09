@@ -1,0 +1,63 @@
+--- origsrc/nfs-server-2.3-5/CYGWIN-PATCHES/nfs-server-config	2006-10-13 13:47:19.000000000 -0500
++++ src/nfs-server-2.3-5/CYGWIN-PATCHES/nfs-server-config	2016-04-27 03:18:42.610411500 -0500
+@@ -18,7 +18,7 @@
+ NFSD_USER=
+ NFSD_PASS=
+ 
+-PMAP_D='Cygwin portmap'
++PMAP_D='Cygwin rpcbind'
+ PMAP_F='Cygwin RPC Port Mapping service'
+ MNTD_D='Cygwin mountd'
+ MNTD_F='Cygwin NFS Mount service'
+@@ -86,7 +86,7 @@
+ 	Cygwin.  As part of this setup, the script will do the following:
+ 
+ 	  1) Create a user account to run the services under. [OPTIONAL]
+-	  2) Install portmap, mountd, and nfsd as Windows services.
++	  2) Install rpcbind, mountd, and nfsd as Windows services.
+ 	  3) Create a sample exports file.
+ 	  4) Create a sample uid/gid mapping file.
+ 
+@@ -120,7 +120,7 @@
+ 
+ fi
+ 
+-# Other ways to determine if portmap is already running:
++# Other ways to determine if rpcbind is already running:
+ #   $ netstat -a | grep ':sunrpc'
+ #   $ netstat -an | grep ':111'
+ 
+@@ -140,7 +140,7 @@
+ 
+ 		        ${OTHER_UNIX}
+ 
+-		Cygwin's portmap, mountd, and nfsd services may be installed, but will
++		Cygwin's rpcbind, mountd, and nfsd services may be installed, but will
+ 		not work properly if the other Unix environment's services are running.
+ 
+ 		Please consult the documentation for the other Unix environment for
+@@ -212,9 +212,9 @@
+ 
+ # Install services
+ 
+-install_service "portmap" "$PMAP_D" "$PMAP_F" ""        portmap    "-F"
+-install_service "mountd"  "$MNTD_D" "$MNTD_F" "portmap" rpc.mountd "-F"
+-install_service "nfsd"    "$NFSD_D" "$NFSD_F" "portmap" rpc.nfsd   "-F -u $(id -u)"
++install_service "rpcbind" "$PMAP_D" "$PMAP_F" ""        rpcbind    "-f"
++install_service "mountd"  "$MNTD_D" "$MNTD_F" "rpcbind" rpc.mountd "-F"
++install_service "nfsd"    "$NFSD_D" "$NFSD_F" "rpcbind" rpc.nfsd   "-F -u $(id -u)"
+ 
+ 
+ # Create sample /etc/exports (only if it does not already exist)
+@@ -325,9 +325,9 @@
+ 
+ 	It looks like you have installed Cygwin for a single user.  Cygwin mount
+ 	points will not be available to programs installed as Windows services. This
+-	will keep portmap, mountd, and nfsd from running as Windows services.
++	will keep rpcbind, mountd, and nfsd from running as Windows services.
+ 
+-	In order for portmap, mountd and nfsd to function properly, you should
++	In order for rpcbind, mountd and nfsd to function properly, you should
+ 	establish global mount points using the /bin/mount utility. You can change
+ 	user-specific Cygwin mount points to global mount points using the following
+ 	command:

@@ -1,0 +1,38 @@
+NAME="nfs-server"
+VERSION=2.3
+RELEASE=6
+CATEGORY="Net"
+SUMMARY="NFSv2 server"
+DESCRIPTION="This project is a true NFS server implementation for Linux, with
+all functionality occurring in user-space."
+HOMEPAGE="https://sourceforge.net/projects/unfs/"
+SRC_URI="nfs-server-2.3-5-src.tar.bz2"
+SRC_DIR="nfs-server-2.3-5"
+PATCH_URI="
+	2.3-libtirpc.patch
+	2.3-rpcbind.patch
+	2.3-service.patch
+"
+
+REQUIRES="rpcbind"
+
+CYGPORT_USE_UNSTABLE_API=1
+src_unpack_hook() {
+	rm -f CYGWIN-PATCHES/setup.hint
+}
+
+src_compile() {
+	lndirs
+	cd ${B}
+	CFLAGS+=" -I/usr/include/tirpc"
+	CPPFLAGS+=" -I/usr/include/tirpc"
+	LIBS="-ltirpc"
+	cygconf
+	cygmake
+}
+
+src_install() {
+	cd ${B}
+	cygmake install install_prefix=${D} INSTALL_PROGRAM="/usr/bin/install -m0755"
+	dosbin ${C}/${NAME}-config
+}
