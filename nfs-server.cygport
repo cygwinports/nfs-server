@@ -1,6 +1,6 @@
 NAME="nfs-server"
 VERSION=2.3
-RELEASE=6
+RELEASE=7
 CATEGORY="Net"
 SUMMARY="NFSv2 server"
 DESCRIPTION="This project is a true NFS server implementation for Linux, with
